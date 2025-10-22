@@ -34,8 +34,9 @@ impl Executor {
                 }
             }
 
-            for i in tasks_to_remove {
-                self.tasks.remove(i);
+            for i in 1..=tasks_to_remove.len() {
+                self.tasks
+                    .swap_remove_back(tasks_to_remove[tasks_to_remove.len() - i]);
             }
         }
     }
