@@ -23,21 +23,10 @@ impl Executor {
 
     pub fn run(&mut self) {
         while !self.tasks.is_empty() {
-            let mut tasks_to_remove = Vec::<usize>::with_capacity(self.tasks.len());
-
-            for (i, task) in self.tasks.iter_mut().enumerate() {
-                match Executor::poll_future(task) {
-                    Poll::Ready(_) => {
-                        tasks_to_remove.push(i);
-                    }
-                    Poll::Pending => {}
-                }
-            }
-
-            for i in 1..=tasks_to_remove.len() {
-                self.tasks
-                    .swap_remove_back(tasks_to_remove[tasks_to_remove.len() - i]);
-            }
+            self.tasks.retain_mut(|t| match Executor::poll_future(t) {
+                Poll::Ready(_) => false,
+                Poll::Pending => true,
+            })
         }
     }
 
