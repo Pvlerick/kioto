@@ -28,7 +28,7 @@ impl Executor {
         while !self.tasks.is_empty() {
             self.tasks.retain_mut(|task| {
                 let waker = Arc::new(NoopWaker);
-                match Executor::poll_future(task, waker) {
+                match Executor::poll_future(task.as_mut(), waker) {
                     Poll::Ready(_) => false,
                     Poll::Pending => true,
                 }
@@ -36,13 +36,12 @@ impl Executor {
         }
     }
 
-    fn poll_future<F>(future: &mut F, waker: Arc<NoopWaker>) -> Poll<F::Output>
+    fn poll_future<F>(future: Pin<&mut F>, waker: Arc<NoopWaker>) -> Poll<F::Output>
     where
-        F: Future + Unpin,
+        F: Future + ?Sized,
     {
         let waker = Waker::from(waker);
         let mut cx = Context::from_waker(&waker);
-        let pinned = unsafe { Pin::new_unchecked(future) };
-        pinned.poll(&mut cx)
+        future.poll(&mut cx)
     }
 }
