@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
+
+use crate::noop_waker::NoopWaker;
 
 pub struct Executor {
     tasks: VecDeque<Pin<Box<dyn Future<Output = ()>>>>,
@@ -23,18 +26,22 @@ impl Executor {
 
     pub fn run(&mut self) {
         while !self.tasks.is_empty() {
-            self.tasks.retain_mut(|t| match Executor::poll_future(t) {
-                Poll::Ready(_) => false,
-                Poll::Pending => true,
+            self.tasks.retain_mut(|task| {
+                let waker = Arc::new(NoopWaker);
+                match Executor::poll_future(task, waker) {
+                    Poll::Ready(_) => false,
+                    Poll::Pending => true,
+                }
             })
         }
     }
 
-    fn poll_future<F>(future: &mut F) -> Poll<F::Output>
+    fn poll_future<F>(future: &mut F, waker: Arc<NoopWaker>) -> Poll<F::Output>
     where
         F: Future + Unpin,
     {
-        let mut cx = Context::from_waker(Waker::noop());
+        let waker = Waker::from(waker);
+        let mut cx = Context::from_waker(&waker);
         let pinned = unsafe { Pin::new_unchecked(future) };
         pinned.poll(&mut cx)
     }
