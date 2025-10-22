@@ -13,9 +13,15 @@ impl Future for CounterFuture {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
+        println!(
+            "Polling CounterFuture: count={}, max={}",
+            self.count, self.max
+        );
+
         self.count += 1;
 
         if self.count >= self.max {
+            println!("CounterFuture is ready");
             Poll::Ready(self.max)
         } else {
             let waker = cx.waker().clone();
