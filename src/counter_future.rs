@@ -21,7 +21,6 @@ impl Future for CounterFuture {
         self.count += 1;
 
         if self.count >= self.max {
-            println!("CounterFuture is ready");
             Poll::Ready(self.max)
         } else {
             let waker = cx.waker().clone();

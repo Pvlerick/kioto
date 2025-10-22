@@ -4,7 +4,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 
 pub struct Executor {
-    tasks: VecDeque<Pin<Box<dyn Future<Output = u32>>>>,
+    tasks: VecDeque<Pin<Box<dyn Future<Output = ()>>>>,
 }
 
 impl Executor {
@@ -16,7 +16,7 @@ impl Executor {
 
     pub fn spawn<F>(&mut self, future: F)
     where
-        F: Future<Output = u32> + 'static,
+        F: Future<Output = ()> + 'static,
     {
         self.tasks.push_front(Box::pin(future));
     }

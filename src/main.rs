@@ -3,6 +3,10 @@ use kioto::executor::Executor;
 
 fn main() {
     let mut executor = Executor::new();
-    executor.spawn(CounterFuture { count: 0, max: 3 });
+    executor.run();
+    executor.spawn(async {
+        let result = CounterFuture { count: 0, max: 3 }.await;
+        println!("CounterFuture completed with: {}", result);
+    });
     executor.run();
 }
