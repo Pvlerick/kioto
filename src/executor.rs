@@ -49,23 +49,23 @@ impl Executor {
     }
 
     pub fn run(mut self) {
-        while let Some(task_id) = self.wake_receiver.try_recv() {
-            let mut front = VecDeque::new();
-            let mut back = VecDeque::new();
+        while !self.tasks.is_empty() {
+            while let Some(task_id) = self.wake_receiver.try_recv() {
+                let mut front = VecDeque::new();
+                let mut back = VecDeque::new();
 
-            for task in self.tasks {
-                if task.id == task_id {
-                    front.push_back(task);
-                } else {
-                    back.push_back(task);
+                for task in self.tasks {
+                    if task.id == task_id {
+                        front.push_back(task);
+                    } else {
+                        back.push_back(task);
+                    }
                 }
+
+                front.append(&mut back);
+                self.tasks = front;
             }
 
-            front.append(&mut back);
-            self.tasks = front;
-        }
-
-        while !self.tasks.is_empty() {
             self.tasks.retain_mut(|task| {
                 let waker = TaskWaker::new(task.id, self.wake_sender.clone());
 

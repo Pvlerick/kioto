@@ -11,7 +11,7 @@ impl Future for CounterFuture {
 
     fn poll(
         mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
         println!(
             "Polling CounterFuture: count={}, max={}",
