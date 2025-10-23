@@ -1,4 +1,4 @@
-use std::{task::Poll, thread, time::Duration};
+use std::task::Poll;
 
 #[derive(Debug)]
 pub struct CounterFuture {
@@ -23,11 +23,6 @@ impl Future for CounterFuture {
         if self.count >= self.max {
             Poll::Ready(self.max)
         } else {
-            let waker = cx.waker().clone();
-            thread::spawn(move || {
-                thread::sleep(Duration::from_secs(1));
-                waker.wake_by_ref();
-            });
             Poll::Pending
         }
     }
