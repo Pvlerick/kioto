@@ -1,11 +1,16 @@
-use kioto::counter_future::CounterFuture;
+use std::time::Duration;
+
+use kioto::delay_future::DelayFuture;
 use kioto::executor::Executor;
 
 fn main() {
     let mut executor = Executor::new();
+
     executor.spawn(async {
-        let result = CounterFuture { count: 0, max: 3 }.await;
-        println!("CounterFuture completed with: {}", result);
+        println!("Task 1: Starting delay...");
+        DelayFuture::new(5, Duration::from_secs(1)).await;
+        println!("Task 1: Delay completed!");
     });
+
     executor.run();
 }
