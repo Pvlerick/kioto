@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
 use std::future::Future;
-use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -75,16 +74,24 @@ impl MultiThreadedExecutor {
 
             thread::spawn(move || {
                 loop {
-                    let mut tasks = tasks.lock().unwrap();
+                    let task = {
+                        let mut tasks = tasks.lock().unwrap();
+                        tasks.pop_front()
+                    };
 
-                    tasks.retain_mut(|task| {
+                    if let Some(mut task) = task {
                         let waker = TaskWaker::new(task.id, wake_sender.clone());
 
                         match Self::poll_future(task.future.as_mut(), waker) {
-                            Poll::Ready(_) => false,
-                            Poll::Pending => true,
+                            Poll::Ready(_) => {}
+                            Poll::Pending => {
+                                let mut tasks = tasks.lock().unwrap();
+                                tasks.push_back(task);
+                            }
                         }
-                    });
+                    } else {
+                        thread::yield_now();
+                    }
                 }
             });
         }
@@ -104,10 +111,9 @@ impl MultiThreadedExecutor {
                 let mut front = VecDeque::new();
                 let mut back = VecDeque::new();
 
-                let mut tasks_ref = tasks.lock().unwrap();
-                let tasks = mem::take(&mut *tasks_ref);
+                let mut tasks = tasks.lock().unwrap();
 
-                for task in tasks.into_iter() {
+                for task in tasks.drain(..) {
                     if task.id == task_id {
                         front.push_back(task);
                     } else {
@@ -116,7 +122,7 @@ impl MultiThreadedExecutor {
                 }
 
                 front.append(&mut back);
-                *tasks_ref = front;
+                *tasks = front;
             }
         });
     }

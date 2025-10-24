@@ -7,17 +7,21 @@ fn main() {
     let executor = MultiThreadedExecutor::new(4);
 
     executor.spawn(async {
-        println!("Task 1: Starting delay...");
-        DelayFuture::new(3, Duration::from_secs(1)).await;
-        println!("Task 1: Delay completed!");
+        delay("one", Duration::from_secs(1)).await;
+        delay("two", Duration::from_millis(500)).await;
     });
 
     executor.spawn(async {
-        println!("Task 2: Starting delay...");
-        DelayFuture::new(2, Duration::from_secs(1)).await;
-        println!("Task 2: Delay completed!");
+        delay("three", Duration::from_millis(750)).await;
+        delay("four", Duration::from_millis(250)).await;
     });
 
     // Keep the main thread alive to allow tasks to complete
     std::thread::park();
+}
+
+async fn delay(name: &str, duration: Duration) {
+    println!("{name}: starting delay");
+    DelayFuture::new(5, duration).await;
+    println!("{name}: finished");
 }
