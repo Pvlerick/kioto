@@ -39,52 +39,9 @@ impl MultiThreadedExecutor {
             next_task_id: AtomicUsize::new(0),
         };
 
-        // Reordering background thread
-        let tasks = executor.tasks.clone();
-        let wake_sender = wake_sender.clone();
-        let wake_receiver = wake_receiver.clone();
+        executor.start_reordering_thread();
 
-        thread::spawn(move || {
-            loop {
-                let task_id = wake_receiver.lock().unwrap().blocking_recv();
-
-                let mut tasks = tasks.lock().unwrap();
-                let mut front = VecDeque::new();
-                let mut back = VecDeque::new();
-
-                for task in tasks.into_iter() {
-                    if task.id == task_id {
-                        front.push_back(task);
-                    } else {
-                        back.push_back(task);
-                    }
-                }
-
-                front.append(&mut back);
-                mem::replace(&mut *tasks, front);
-            }
-        });
-
-        // Execution threads
-        for _ in 0..num_threads {
-            let tasks = executor.tasks.clone();
-            let wake_sender = wake_sender.clone();
-            let wake_receiver = wake_receiver.clone();
-
-            thread::spawn(move || {
-                loop {
-
-                    // tasks.retain_mut(|task| {
-                    //     let waker = TaskWaker::new(task.id, wake_sender.clone());
-                    //
-                    //     match Executor::poll_future(task.future.as_mut(), waker) {
-                    //         Poll::Ready(_) => false,
-                    //         Poll::Pending => true,
-                    //     }
-                    // });
-                }
-            });
-        }
+        executor.start_execution_threads(num_threads);
 
         executor
     }
@@ -107,5 +64,60 @@ impl MultiThreadedExecutor {
         let waker = Waker::from(waker);
         let mut cx = Context::from_waker(&waker);
         future.poll(&mut cx)
+    }
+
+    fn start_execution_threads(&self, num_threads: usize) {
+        println!("Starting {num_threads} tasks execution threads");
+
+        for _ in 0..num_threads {
+            let tasks = self.tasks.clone();
+            let wake_sender = self.wake_sender.clone();
+
+            thread::spawn(move || {
+                loop {
+                    let mut tasks = tasks.lock().unwrap();
+
+                    tasks.retain_mut(|task| {
+                        let waker = TaskWaker::new(task.id, wake_sender.clone());
+
+                        match Self::poll_future(task.future.as_mut(), waker) {
+                            Poll::Ready(_) => false,
+                            Poll::Pending => true,
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    fn start_reordering_thread(&self) {
+        println!("Starting tasks reordering thread");
+
+        let tasks = self.tasks.clone();
+        let wake_receiver = self.wake_receiver.clone();
+
+        thread::spawn(move || {
+            loop {
+                // Blocks the thread while the channel is empty
+                let task_id = wake_receiver.lock().unwrap().blocking_recv();
+
+                let mut front = VecDeque::new();
+                let mut back = VecDeque::new();
+
+                let mut tasks_ref = tasks.lock().unwrap();
+                let tasks = mem::take(&mut *tasks_ref);
+
+                for task in tasks.into_iter() {
+                    if task.id == task_id {
+                        front.push_back(task);
+                    } else {
+                        back.push_back(task);
+                    }
+                }
+
+                front.append(&mut back);
+                *tasks_ref = front;
+            }
+        });
     }
 }

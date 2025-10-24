@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use kioto::delay_future::DelayFuture;
-use kioto::executor::Executor;
 use kioto::multi_threaded_executor::MultiThreadedExecutor;
 
 fn main() {
