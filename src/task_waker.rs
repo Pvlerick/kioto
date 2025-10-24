@@ -46,4 +46,8 @@ impl TaskWakeReceiver {
             _ => panic!("Failed to receive from channel"),
         }
     }
+
+    pub fn blocking_recv(&self) -> usize {
+        self.receiver.recv().unwrap()
+    }
 }
