@@ -4,3 +4,4 @@ pub mod executor;
 pub mod multi_threaded_executor;
 pub mod noop_waker;
 pub mod task_waker;
+pub(crate) mod timer_wheel;

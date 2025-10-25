@@ -29,7 +29,7 @@ This project was created to:
 ---
 
 ## **Learning Journey**
-This project was developed as a learning exercise with the help of **Mistral**, an AI assistant by Mistral AI. Mistral acted as a tutor, guiding the implementation, explaining concepts, and reviewing code.
+This project was developed as a learning exercise with the help of (**Le Chat**)[https://chat.mistral.ai/], an AI assistant by Mistral AI. Mistral acted as a tutor, guiding the implementation, explaining concepts, and reviewing code.
 
 ---
 
