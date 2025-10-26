@@ -37,6 +37,10 @@ impl<T> TimerWheel<T> {
         }
     }
 
+    pub fn interval(&self) -> Duration {
+        self.bucket_duration
+    }
+
     pub fn add_timer(&mut self, data: T, delay: Duration) {
         let expires_at = Instant::now() + delay;
         let bucket_index = self.calculate_bucket_index(expires_at);
@@ -62,7 +66,9 @@ impl<T> TimerWheel<T> {
         (self.current_bucket + bucket_index) % self.buckets.len()
     }
 
-    fn tick(&mut self) -> Vec<T> {
+    const EMPTY: VecDeque<Timer<T>> = VecDeque::new();
+
+    pub(crate) fn tick(&mut self) -> Vec<T> {
         let mut expired = Vec::new();
         let now = Instant::now();
         let elapsed_buckets = (now.duration_since(self.start_time).as_secs_f64()

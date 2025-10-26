@@ -1,21 +1,18 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub struct DelayFuture {
-    max: u32,
     duration: Duration,
-    count: u32,
+    start: Instant,
 }
 
 impl DelayFuture {
-    pub fn new(max: u32, duration: Duration) -> Self {
+    pub fn new(duration: Duration) -> Self {
         Self {
-            count: 0,
-            max,
             duration,
+            start: Instant::now(),
         }
     }
 }
@@ -23,15 +20,12 @@ impl DelayFuture {
 impl Future for DelayFuture {
     type Output = ();
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        println!("Polling DelayFuture {}...", self.count);
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        println!("Polling DelayFuture ...");
 
-        self.count += 1;
-
-        if self.count >= self.max {
+        if Instant::now() >= self.start + self.duration {
             Poll::Ready(())
         } else {
-            thread::sleep(self.duration);
             cx.waker().wake_by_ref();
             Poll::Pending
         }

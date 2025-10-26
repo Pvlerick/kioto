@@ -5,8 +5,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::Sender;
 use std::task::{Context, Poll, Waker};
+use std::time::{Duration, Instant};
 
 use crate::task_waker::{TaskWakeReceiver, TaskWaker};
+use crate::timer_wheel::TimerWheel;
 
 pub struct Task {
     id: usize,
@@ -24,17 +26,22 @@ pub struct Executor {
     wake_sender: Sender<usize>,
     wake_receiver: TaskWakeReceiver,
     next_task_id: AtomicUsize,
+    timer_wheel: TimerWheel<()>,
+    last_timer_check: Instant,
 }
 
 impl Executor {
     pub fn new() -> Self {
         let (wake_sender, wake_receiver) = TaskWakeReceiver::new();
+        let timer_wheel = TimerWheel::new(100, Duration::from_millis(10));
 
         Executor {
             tasks: VecDeque::new(),
             wake_sender,
             wake_receiver,
             next_task_id: AtomicUsize::new(0),
+            timer_wheel,
+            last_timer_check: Instant::now(),
         }
     }
 
@@ -50,6 +57,10 @@ impl Executor {
 
     pub fn run(mut self) {
         while !self.tasks.is_empty() {
+            if self.last_timer_check < Instant::now() + self.timer_wheel.interval() {
+                self.timer_wheel.tick();
+            }
+
             while let Some(task_id) = self.wake_receiver.try_recv() {
                 let mut front = VecDeque::new();
                 let mut back = VecDeque::new();
